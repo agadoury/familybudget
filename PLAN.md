@@ -1,7 +1,7 @@
 # PLAN — Household budget, LOC payoff & investment app
 
-Status: **planning checkpoint — no app code written yet.** This file restates the
-build plan and lists the open questions that need answers before seeding real data.
+Status: **built.** Sections 0–5 are the plan as agreed; section 8 records the answers.
+The app is in `src/`, engines in `src/lib/payoff` and `src/lib/invest` (tests in `tests/`).
 
 ---
 
@@ -242,7 +242,15 @@ pause, RESP grants with caps. Each with a hand-computed fixture shown in the tes
 8. Car loans, mortgage: I will seed placeholder values (see questions) and mark them
    `estimate` in the notes field so they are visibly unconfirmed in the UI.
 
-## 8. Open questions — please answer before I seed real data
+## 8. Open questions — answered (2026-09-05)
+
+Answers: cards 20 % with the Quebec 5 % minimum; both cars are 700 $ leases; mortgage is monthly,
+amortization/renewal not important (estimates seeded); Candiac tax estimate used; LOC does not creep
+unless the budget is negative; life/disability covered by employers, SAAQ ignored, no car
+maintenance (leases), no cell phones, adult clothing is in Shopping; TFSAs empty (full room, ages 33
+and 30), RRSP room estimated from 170 k / 120 k salaries; home 1,28 M; design choices confirmed.
+
+Original questions kept for reference:
 
 **Placeholders in the brief**
 1. Pay dates for Alex and Sélia (only affects the check-in calendar, not the math).
