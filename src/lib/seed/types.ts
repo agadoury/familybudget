@@ -8,6 +8,8 @@ export interface SeedData {
     homeValue: number;
     cashBuffer: number;
     defaultReturnPct: number;
+    alexGrossIncome?: number;
+    seliaGrossIncome?: number;
   };
   accounts: {
     key: string;

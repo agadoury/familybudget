@@ -130,7 +130,7 @@ export function Dashboard({ data, activeScenario, baselineOverrides, snapshots }
         </Card>
         <Card>
           <CardContent className="p-5">
-            <h2 className="font-semibold mb-3 flex items-center gap-2"><Lightbulb className="h-4 w-4 text-watch" /> {t("dash.insights")}</h2>
+            <div className="flex items-center justify-between mb-3"><h2 className="font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-watch" /> {t("dash.insights")}</h2><Link href="/insights" className="text-sm text-primary font-medium inline-flex items-center gap-1">{fr ? "Tous les conseils" : "All advice"} <ArrowRight className="h-3.5 w-3.5" /></Link></div>
             {insights.length === 0 ? <p className="text-sm text-muted-foreground">{fr ? "Rien à signaler." : "Nothing to flag."}</p> : (
               <div className="space-y-2">
                 {insights.map((i) => <Callout key={i.key} tone={i.level}>{i.text}</Callout>)}

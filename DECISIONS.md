@@ -68,3 +68,15 @@ Trade-offs made without asking, with the reason. Newest at the bottom.
     inputs. Advanced scenario levers sit under "More options". Colours always come with a word
     or icon (never colour alone). Nothing was removed; the month-by-month table, comparison,
     solver, bonuses and debt editor are still on the Debt plan page.
+23. **Insights page is a rule-based advisor, not an LLM.** Each recommendation is produced by a
+    rule that re-runs the payoff and investment engines under an alternative plan, so every
+    "months sooner / interest saved" figure is reproducible and can be opened as a scenario
+    ("Try this plan"). Rules stay silent when they do not apply. Quebec 2025 marginal-rate
+    brackets (with the 16.5 % federal abatement, before credits) live in `src/lib/tax.ts` and are
+    driven by the gross salaries entered in Settings; they are used only for RRSP-vs-debt advice.
+24. **Payroll RRSP redirects are now tax-aware** in the projection: stopping a pre-tax deduction
+    raises net pay by only (1 − marginal rate) of the gross amount, so a redirect sends that net
+    amount to debt. TFSA/other redirects are unchanged (already after tax).
+25. **The "close the gap" package** cuts only non-essential flexible lines, largest first, in 5 %
+    steps capped at 50 % per line; if that is not enough it offers pausing the vacation fund. The
+    RESP rule targets 2 500 $/year because that captures the full CESG + QESI (30 % immediate).

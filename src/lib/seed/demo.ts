@@ -4,7 +4,7 @@ import type { SeedData } from "./types";
 const AS_OF = "2026-09-01";
 
 export const demoSeed: SeedData = {
-  settings: { alexName: "Alex", seliaName: "Sélia", homeValue: 650_000, cashBuffer: 2_000, defaultReturnPct: 6 },
+  settings: { alexName: "Alex", seliaName: "Sélia", homeValue: 650_000, cashBuffer: 2_000, defaultReturnPct: 6, alexGrossIncome: 95_000, seliaGrossIncome: 78_000 },
   accounts: [
     { key: "a_rrsp", owner: "ALEX", name: "Alex RRSP", type: "RRSP", balance: 0, asOf: AS_OF },
     { key: "a_rrsp_ind", owner: "ALEX", name: "Brokerage RRSP", type: "RRSP", subType: "individual", parentKey: "a_rrsp", balance: 42_500, asOf: AS_OF },

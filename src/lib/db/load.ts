@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "./prisma";
 import type { HouseholdData } from "@/lib/projection";
 import { parseOverrides, type ScenarioOverrides } from "@/lib/payoff";
+import { marginalRateBps } from "@/lib/tax";
 
 /** Everything the engines need, loaded once per request. */
 export const loadHousehold = cache(async (): Promise<HouseholdData & { settingsRow: Awaited<ReturnType<typeof getSettings>> }> => {
@@ -28,6 +29,7 @@ export const loadHousehold = cache(async (): Promise<HouseholdData & { settingsR
       defaultReturnBps: settingsRow.defaultReturnBps,
       homeValueCents: settingsRow.homeValueCents,
       cashBufferCents: settingsRow.cashBufferCents,
+      marginalRateBps: { ALEX: marginalRateBps(settingsRow.alexGrossIncomeCents), SELIA: marginalRateBps(settingsRow.seliaGrossIncomeCents) },
     },
   };
 });

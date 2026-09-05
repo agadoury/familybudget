@@ -71,7 +71,13 @@ export interface HouseholdData {
   lumpSumSchedules: LumpSumScheduleRow[];
   accounts: AccountRow[];
   bonuses: BonusRow[];
-  settings: { defaultReturnBps: number; homeValueCents: number; cashBufferCents: number };
+  settings: {
+    defaultReturnBps: number;
+    homeValueCents: number;
+    cashBufferCents: number;
+    /** Marginal tax rate per person (bps); payroll RRSP redirects reach debt net of this. */
+    marginalRateBps?: { ALEX: number; SELIA: number };
+  };
 }
 
 export interface ProjectionOptions {
@@ -95,6 +101,18 @@ export interface Projection {
   currentNetWorthCents: number;
   currentNetWorthWithHomeCents: number;
   consumerDebtCents: number;
+}
+
+/** After-tax cash from stopping a payroll deduction: RRSP deductions are pre-tax, TFSA ones are not. */
+export function netOfTax(
+  grossCents: number,
+  owner: "ALEX" | "SELIA" | "JOINT" | undefined,
+  accountType: string | undefined,
+  rates?: { ALEX: number; SELIA: number },
+): number {
+  if (accountType !== "RRSP" || !rates) return grossCents;
+  const bps = owner === "ALEX" ? rates.ALEX : owner === "SELIA" ? rates.SELIA : Math.round((rates.ALEX + rates.SELIA) / 2);
+  return Math.round((grossCents * (10_000 - bps)) / 10_000);
 }
 
 export function currentRateBps(d: DebtRow, asOf: Date = new Date()): number {
@@ -249,9 +267,13 @@ export function buildProjection(data: HouseholdData, opts: ProjectionOptions): P
     ...(opts.withBonuses ? bonusLumpSums(data.bonuses, startMonth) : []),
   ];
   // Payroll redirects are added month by month as lump sums so they do not change the spending account.
+  // A stopped RRSP payroll deduction raises net pay by only (1 − marginal rate) of the gross amount.
   for (const r of payrollRedirects) {
+    const c = data.contributions.find((x) => x.id === r.contributionId);
+    const acct = c ? data.accounts.find((a) => a.id === c.accountId) : undefined;
+    const net = netOfTax(r.cents, acct?.owner, acct?.type, data.settings.marginalRateBps);
     for (let m = r.startMonth; m <= r.endMonth; m = addMonths(m, 1)) {
-      lumpSums.push({ month: m, cents: r.cents, label: "Redirected payroll contribution", kind: "oneoff" });
+      lumpSums.push({ month: m, cents: net, label: "Redirected payroll contribution (after tax)", kind: "oneoff" });
     }
   }
 

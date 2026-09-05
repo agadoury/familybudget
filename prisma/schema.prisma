@@ -112,6 +112,9 @@ model Settings {
   homeValueCents    Int      @default(0)
   cashBufferCents   Int      @default(200000)
   includeHomeEquity Boolean  @default(false)
+  /// Gross annual salaries: used only to estimate marginal tax rates for RRSP-vs-debt advice.
+  alexGrossIncomeCents  Int  @default(0)
+  seliaGrossIncomeCents Int  @default(0)
   updatedBy         Person?
   updatedAt         DateTime @updatedAt
 }

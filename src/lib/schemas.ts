@@ -147,6 +147,8 @@ export const settingsSchema = z.object({
   homeValueCents: cents,
   cashBufferCents: cents,
   includeHomeEquity: z.boolean(),
+  alexGrossIncomeCents: cents,
+  seliaGrossIncomeCents: cents,
 });
 
 export const snapshotSchema = z.object({

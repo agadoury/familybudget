@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useTransition } from "react";
-import { Home, Wallet, TrendingDown, Sprout, ClipboardCheck, Settings, Moon, Sun, LogOut, Languages } from "lucide-react";
+import { Home, Wallet, TrendingDown, Sprout, ClipboardCheck, Settings, Moon, Sun, LogOut, Languages, Lightbulb } from "lucide-react";
 import { useApp } from "./providers";
 import { cn } from "@/lib/utils";
 import { setEditor, logout } from "@/lib/actions/auth";
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/", key: "nav.dashboard", icon: Home },
   { href: "/budget", key: "nav.budget", icon: Wallet },
   { href: "/payoff", key: "nav.payoff", icon: TrendingDown },
+  { href: "/insights", key: "nav.insights", icon: Lightbulb },
   { href: "/investments", key: "nav.investments", icon: Sprout },
   { href: "/checkin", key: "nav.checkin", icon: ClipboardCheck },
 ] as const;
@@ -91,14 +92,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-[1240px] w-full mx-auto fade-in">{children}</main>
-        <nav className="md:hidden fixed bottom-0 inset-x-0 border-t bg-card/95 backdrop-blur grid grid-cols-5 z-40 pb-[env(safe-area-inset-bottom)]">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 border-t bg-card/95 backdrop-blur grid grid-cols-6 z-40 pb-[env(safe-area-inset-bottom)]">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className={cn("flex flex-col items-center gap-1 py-2 text-[11px]", active(n.href) ? "text-primary font-semibold" : "text-muted-foreground")}
+              className={cn("flex flex-col items-center gap-1 py-2 text-[10px]", active(n.href) ? "text-primary font-semibold" : "text-muted-foreground")}
             >
-              <span className={cn("flex h-7 w-12 items-center justify-center rounded-full", active(n.href) && "bg-primary-soft")}><n.icon className="h-4.5 w-4.5" /></span>
+              <span className={cn("flex h-7 w-11 items-center justify-center rounded-full", active(n.href) && "bg-primary-soft")}><n.icon className="h-4.5 w-4.5" /></span>
               {t(n.key)}
             </Link>
           ))}

@@ -4,7 +4,7 @@ import { iso } from "@/lib/dto";
 
 export type HouseholdDTO = {
   incomes: (Omit<HouseholdData["incomes"][number], "startDate" | "endDate"> & { startDate: string; endDate: string | null })[];
-  expenses: (Omit<HouseholdData["expenses"][number], "startDate" | "endDate"> & { startDate: string; endDate: string | null })[];
+  expenses: (Omit<HouseholdData["expenses"][number], "startDate" | "endDate"> & { startDate: string; endDate: string | null; notes: string | null })[];
   contributions: (Omit<HouseholdData["contributions"][number], "startDate" | "endDate"> & { startDate: string; endDate: string | null; source: "PAYROLL" | "SPENDING_ACCOUNT" | "LUMP_SUM"; incomeId?: string | null })[];
   debts: (Omit<HouseholdData["debts"][number], "balanceAsOf" | "endDate" | "rates"> & {
     balanceAsOf: string;
@@ -18,14 +18,14 @@ export type HouseholdDTO = {
   lumpSumSchedules: (Omit<HouseholdData["lumpSumSchedules"][number], "startDate" | "endDate"> & { startDate: string; endDate: string | null; notes: string | null; sourceIncomeId: string | null })[];
   accounts: (Omit<HouseholdData["accounts"][number], "balanceAsOf"> & { balanceAsOf: string; subType: string | null; notes: string | null })[];
   bonuses: (HouseholdData["bonuses"][number] & { debtPaymentId: string | null })[];
-  settings: HouseholdData["settings"] & { defaultScenarioId: string | null; includeHomeEquity: boolean; alexName: string; seliaName: string; language: "EN" | "FR"; cashBufferCents: number };
+  settings: HouseholdData["settings"] & { defaultScenarioId: string | null; includeHomeEquity: boolean; alexName: string; seliaName: string; language: "EN" | "FR"; cashBufferCents: number; alexGrossIncomeCents: number; seliaGrossIncomeCents: number };
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function toHouseholdDTO(data: any): HouseholdDTO {
   return {
     incomes: data.incomes.map((r: any) => ({ id: r.id, person: r.person, name: r.name, amountCents: r.amountCents, frequency: r.frequency, destination: r.destination, startDate: iso(r.startDate)!, endDate: iso(r.endDate) })), // eslint-disable-line @typescript-eslint/no-explicit-any
-    expenses: data.expenses.map((r: any) => ({ id: r.id, name: r.name, category: r.category, amountCents: r.amountCents, frequency: r.frequency, type: r.type, owner: r.owner, essential: r.essential, startDate: iso(r.startDate)!, endDate: iso(r.endDate) })), // eslint-disable-line @typescript-eslint/no-explicit-any
+    expenses: data.expenses.map((r: any) => ({ id: r.id, name: r.name, category: r.category, amountCents: r.amountCents, frequency: r.frequency, type: r.type, owner: r.owner, essential: r.essential, startDate: iso(r.startDate)!, endDate: iso(r.endDate), notes: r.notes })), // eslint-disable-line @typescript-eslint/no-explicit-any
     contributions: data.contributions.map((r: any) => ({ id: r.id, accountId: r.accountId, amountCents: r.amountCents, frequency: r.frequency, source: r.source, startDate: iso(r.startDate)!, endDate: iso(r.endDate), incomeId: r.incomeId })), // eslint-disable-line @typescript-eslint/no-explicit-any
     debts: data.debts.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
       id: r.id, name: r.name, type: r.type, balanceCents: r.balanceCents, balanceAsOf: iso(r.balanceAsOf)!, priority: r.priority,
@@ -46,6 +46,9 @@ export function toHouseholdDTO(data: any): HouseholdDTO {
       alexName: data.settingsRow.alexName,
       seliaName: data.settingsRow.seliaName,
       language: data.settingsRow.language,
+      alexGrossIncomeCents: data.settingsRow.alexGrossIncomeCents,
+      seliaGrossIncomeCents: data.settingsRow.seliaGrossIncomeCents,
+      marginalRateBps: data.settings.marginalRateBps,
     },
   };
 }

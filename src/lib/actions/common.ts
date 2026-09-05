@@ -6,7 +6,7 @@ import type { ZodType } from "zod";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-export const PAGES = ["/", "/budget", "/payoff", "/investments", "/checkin", "/settings"];
+export const PAGES = ["/", "/budget", "/payoff", "/insights", "/investments", "/checkin", "/settings"];
 
 export function revalidateAll() {
   for (const p of PAGES) revalidatePath(p);

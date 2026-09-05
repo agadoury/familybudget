@@ -35,12 +35,13 @@ No analytics, no third-party scripts, no external financial APIs.
 ## Layout
 
 ```
-src/app/(app)/         pages: / (dashboard), /budget, /payoff, /investments, /checkin, /settings
+src/app/(app)/         pages: / (home), /budget, /payoff, /insights, /investments, /checkin, /settings
 src/lib/payoff/        amortization engine + scenario schema (pure TS, tested)
 src/lib/invest/        investment projection + RESP grants (pure TS, tested)
 src/lib/budget/        budget maths (monthly normalisation, cuts)
 src/lib/projection.ts  DB rows + scenario overrides -> engine inputs, net worth
 src/lib/actions/       server actions (Zod-validated, audit-logged)
+src/lib/insights/      dashboard insight rules + the advisor (recommendations)
 src/lib/i18n/strings.ts all UI strings (en + fr)
 prisma/                schema, migrations, seed scripts
 tests/                 vitest

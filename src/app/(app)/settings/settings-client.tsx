@@ -15,7 +15,7 @@ import { parseMoney } from "@/lib/money";
 import { resetDemoData, updateSettings } from "@/lib/actions/settings";
 import { importBudgetCsv } from "@/lib/actions/csv";
 
-type S = { alexName: string; seliaName: string; language: "EN" | "FR"; defaultScenarioId: string | null; defaultReturnBps: number; homeValueCents: number; cashBufferCents: number; includeHomeEquity: boolean };
+type S = { alexName: string; seliaName: string; language: "EN" | "FR"; defaultScenarioId: string | null; defaultReturnBps: number; homeValueCents: number; cashBufferCents: number; includeHomeEquity: boolean; alexGrossIncomeCents: number; seliaGrossIncomeCents: number };
 
 export function SettingsClient({ settings, scenarios }: { settings: S; scenarios: { id: string; name: string }[] }) {
   const { t, lang } = useApp();
@@ -51,6 +51,8 @@ export function SettingsClient({ settings, scenarios }: { settings: S; scenarios
           <F label={lang === "fr" ? "Valeur estimée de la maison" : "Estimated home value"} hint={lang === "fr" ? "Pour le bouton « inclure la maison » de la valeur nette." : "For the net-worth home-equity toggle."}><Input inputMode="decimal" defaultValue={(s.homeValueCents / 100).toFixed(0)} onBlur={(e) => { const c = parseMoney(e.target.value); if (c !== null && c !== s.homeValueCents) save({ homeValueCents: c }); }} /></F>
           <F label={lang === "fr" ? "Tampon d'encaisse minimal" : "Minimum cash buffer"} hint={lang === "fr" ? "Les scénarios n'envoient jamais l'encaisse sous ce montant à la dette." : "Scenarios never send cash below this to debt."}><Input inputMode="decimal" defaultValue={(s.cashBufferCents / 100).toFixed(0)} onBlur={(e) => { const c = parseMoney(e.target.value); if (c !== null && c !== s.cashBufferCents) save({ cashBufferCents: c }); }} /></F>
           <label className="flex items-center justify-between gap-2 self-end pb-2"><span>{lang === "fr" ? "Inclure la maison par défaut" : "Include home equity by default"}</span><Switch checked={s.includeHomeEquity} onCheckedChange={(v) => save({ includeHomeEquity: v })} /></label>
+          <F label={`${lang === "fr" ? "Salaire brut annuel" : "Gross annual salary"} — ${s.alexName}`} hint={lang === "fr" ? "Sert uniquement à estimer le taux marginal d'imposition pour les conseils REER vs dette." : "Used only to estimate the marginal tax rate for RRSP-vs-debt advice."}><Input inputMode="decimal" defaultValue={(s.alexGrossIncomeCents / 100).toFixed(0)} onBlur={(e) => { const c = parseMoney(e.target.value); if (c !== null && c !== s.alexGrossIncomeCents) save({ alexGrossIncomeCents: c }); }} /></F>
+          <F label={`${lang === "fr" ? "Salaire brut annuel" : "Gross annual salary"} — ${s.seliaName}`}><Input inputMode="decimal" defaultValue={(s.seliaGrossIncomeCents / 100).toFixed(0)} onBlur={(e) => { const c = parseMoney(e.target.value); if (c !== null && c !== s.seliaGrossIncomeCents) save({ seliaGrossIncomeCents: c }); }} /></F>
         </CardContent></Card>
 
       <Card><CardHeader><CardTitle>{lang === "fr" ? "Données" : "Data"}</CardTitle></CardHeader>

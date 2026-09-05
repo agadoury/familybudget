@@ -32,6 +32,8 @@ export async function applySeed(prisma: PrismaClient, data: SeedData) {
       homeValueCents: c(data.settings.homeValue),
       cashBufferCents: c(data.settings.cashBuffer),
       defaultReturnBps: bps(data.settings.defaultReturnPct),
+      alexGrossIncomeCents: c(data.settings.alexGrossIncome ?? 0),
+      seliaGrossIncomeCents: c(data.settings.seliaGrossIncome ?? 0),
     },
   });
 
