@@ -11,12 +11,12 @@ for trade-offs.
    defaults. Under *Environment Variables* add:
    - `HOUSEHOLD_PASSWORD` — the password you and Sélia will type
    - `SESSION_SECRET` — any long random string (32+ characters)
-   Click **Deploy**. The first build will fail because there is no database yet — that is expected.
+   Click **Deploy**. Without a database the app shows an “Almost there” page with the remaining steps.
 2. **Add the database.** In the project, open the **Storage** tab → **Create Database** → **Postgres**
    → accept the defaults → **Connect** to the project. Vercel injects `DATABASE_URL` (and the
    unpooled variant) into the project automatically. Nothing to copy.
-3. **Redeploy.** *Deployments* → latest → **Redeploy**. The build runs the migrations itself
-   (`npm run vercel-build`), then starts the app. Open the URL and sign in.
+3. **Redeploy.** *Deployments* → latest → ⋯ → **Redeploy**. The build runs the migrations itself,
+   then starts the app. Open the URL and sign in.
 4. **Load your numbers once.** The app starts empty (or use *Settings → Reset demo data* to look
    around). To load your real numbers, on your computer:
    ```bash

@@ -3,12 +3,22 @@ import { currentEditor, isAuthenticated } from "@/lib/auth";
 import { getSettings } from "@/lib/db/load";
 import { AppProviders } from "@/components/app/providers";
 import { Shell } from "@/components/app/shell";
+import { SetupNeeded } from "@/components/app/setup-needed";
+import { missingEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const missing = missingEnv();
+  if (missing.length) return <SetupNeeded missing={missing} />;
   if (!(await isAuthenticated())) redirect("/login");
-  const [settings, editor] = await Promise.all([getSettings(), currentEditor()]);
+  let settings: Awaited<ReturnType<typeof getSettings>>;
+  try {
+    settings = await getSettings();
+  } catch (e) {
+    return <SetupNeeded missing={[]} dbError={e instanceof Error ? e.message.split("\n")[0].slice(0, 160) : "unknown error"} />;
+  }
+  const editor = await currentEditor();
   return (
     <AppProviders lang={settings.language === "FR" ? "fr" : "en"} editor={editor} names={{ ALEX: settings.alexName, SELIA: settings.seliaName }}>
       <Shell>{children}</Shell>
