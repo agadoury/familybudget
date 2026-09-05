@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import type { SeedData } from "./types";
 
 const c = (dollars: number) => Math.round(dollars * 100);
@@ -164,7 +164,7 @@ export async function applySeed(prisma: PrismaClient, data: SeedData) {
   let baselineId: string | null = null;
   for (const s of data.scenarios) {
     const row = await prisma.scenario.create({
-      data: { name: s.name, description: s.description, isBaseline: s.isBaseline ?? false, overrides: s.overrides },
+      data: { name: s.name, description: s.description, isBaseline: s.isBaseline ?? false, overrides: s.overrides as Prisma.InputJsonValue },
     });
     if (s.isBaseline) baselineId = row.id;
   }

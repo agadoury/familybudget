@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Household budget, LOC payoff & investment app
 
-## Getting Started
+Private web app for two people: budget, consumer-debt payoff planning (LOC + credit cards), investment
+projections, monthly check-in. Next.js 15 (App Router) + TypeScript + Tailwind, Prisma + Postgres, Recharts.
+All money is stored as integer cents; rates as basis points. See `PLAN.md` for the model and `DECISIONS.md`
+for trade-offs.
 
-First, run the development server:
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env            # set DATABASE_URL / DIRECT_URL, HOUSEHOLD_PASSWORD, SESSION_SECRET
+npm install
+npx prisma migrate dev          # creates the schema
+npm run db:seed                 # demo data
+# or, with your real numbers in prisma/seed.household.ts (gitignored; copy seed.household.example.ts):
+npm run db:seed:household
+npm run dev                     # http://localhost:3000
+npm test                        # payoff + investment engine unit tests
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy (Vercel + Neon)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Neon**: create a project; keep the default branch for production and create a `dev` branch for local
+   work. Copy the *pooled* connection string into `DATABASE_URL` and the *direct* one into `DIRECT_URL`.
+2. **Vercel**: import this repository. Environment variables:
+   `DATABASE_URL`, `DIRECT_URL`, `HOUSEHOLD_PASSWORD`, `SESSION_SECRET` (32+ random chars).
+   Build command: `prisma migrate deploy && next build` (or set `npm run vercel-build`).
+3. Seed production once from your machine, pointing at the production branch:
+   `DATABASE_URL=... DIRECT_URL=... SEED_PROFILE=household npx tsx prisma/seed.ts`
+4. Open the URL on both phones and sign in with the household password. Choose who is editing in the
+   sidebar (Alex / Sélia); every change is logged with that name.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+No analytics, no third-party scripts, no external financial APIs.
 
-## Learn More
+## Layout
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app/(app)/         pages: / (dashboard), /budget, /payoff, /investments, /checkin, /settings
+src/lib/payoff/        amortization engine + scenario schema (pure TS, tested)
+src/lib/invest/        investment projection + RESP grants (pure TS, tested)
+src/lib/budget/        budget maths (monthly normalisation, cuts)
+src/lib/projection.ts  DB rows + scenario overrides -> engine inputs, net worth
+src/lib/actions/       server actions (Zod-validated, audit-logged)
+src/lib/i18n/strings.ts all UI strings (en + fr)
+prisma/                schema, migrations, seed scripts
+tests/                 vitest
+```

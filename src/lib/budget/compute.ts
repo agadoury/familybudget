@@ -3,7 +3,7 @@ import { activeInMonth, toMonthlyCents, type Frequency, type MonthKey } from "@/
 /** Plain-data shapes (subset of the Prisma rows) so this module stays testable without a DB. */
 export interface IncomeRow {
   id: string;
-  person: "ALEX" | "SELIA";
+  person: "ALEX" | "SELIA" | null;
   name: string;
   amountCents: number;
   frequency: Frequency;
