@@ -1,0 +1,375 @@
+// Household budget, LOC payoff & investment app — data model.
+// All money is stored as integer cents; all rates as integer basis points (5.95 % = 595).
+// Dates that are "calendar dates" use @db.Date; months are stored as the first of the month.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Person {
+  ALEX
+  SELIA
+}
+
+enum Owner {
+  SHARED
+  ALEX
+  SELIA
+}
+
+enum AccountOwner {
+  ALEX
+  SELIA
+  JOINT
+}
+
+enum Frequency {
+  WEEKLY
+  BI_WEEKLY
+  SEMI_MONTHLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  ONE_TIME
+}
+
+enum IncomeDestination {
+  SPENDING_ACCOUNT
+  RRSP
+  STOCK_PLAN
+  TFSA
+  DEBT_PAYDOWN
+  OTHER
+}
+
+enum ExpenseType {
+  FIXED
+  FLEXIBLE
+  SAVINGS
+}
+
+enum DebtType {
+  LOC
+  CREDIT_CARD
+  CAR_LOAN
+  LEASE
+  MORTGAGE
+  OTHER
+}
+
+/// How the scheduled/minimum payment of a debt is computed each month.
+enum MinimumType {
+  FIXED
+  PERCENT_OF_BALANCE
+  INTEREST_ONLY
+}
+
+enum PaymentType {
+  MINIMUM
+  EXTRA
+  LUMP_SUM
+}
+
+enum AccountType {
+  RRSP
+  TFSA
+  RESP
+  NON_REGISTERED
+  STOCK_PLAN
+  CASH
+}
+
+enum ContributionSource {
+  PAYROLL
+  SPENDING_ACCOUNT
+  LUMP_SUM
+}
+
+enum Confidence {
+  UNCONFIRMED
+  CONFIRMED
+}
+
+enum Language {
+  EN
+  FR
+}
+
+/// Singleton (id = 1).
+model Settings {
+  id                Int      @id @default(1)
+  alexName          String   @default("Alex")
+  seliaName         String   @default("Sélia")
+  language          Language @default(EN)
+  defaultScenarioId String?
+  defaultReturnBps  Int      @default(600)
+  homeValueCents    Int      @default(0)
+  cashBufferCents   Int      @default(200000)
+  includeHomeEquity Boolean  @default(false)
+  updatedBy         Person?
+  updatedAt         DateTime @updatedAt
+}
+
+model Income {
+  id                  String             @id @default(cuid())
+  person              Person?
+  name                String
+  amountCents         Int
+  frequency           Frequency
+  destination         IncomeDestination
+  startDate           DateTime           @db.Date
+  endDate             DateTime?          @db.Date
+  notes               String?
+  /// When destination is RRSP / TFSA / STOCK_PLAN: the sub-account the payroll deduction lands in.
+  investmentAccountId String?
+  investmentAccount   InvestmentAccount? @relation(fields: [investmentAccountId], references: [id], onDelete: SetNull)
+  contribution        Contribution?
+  lumpSumSchedules    LumpSumSchedule[]
+  updatedBy           Person?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model Expense {
+  id          String      @id @default(cuid())
+  name        String
+  category    String
+  amountCents Int
+  frequency   Frequency
+  type        ExpenseType
+  owner       Owner       @default(SHARED)
+  essential   Boolean     @default(false)
+  startDate   DateTime    @db.Date
+  endDate     DateTime?   @db.Date
+  notes       String?
+  updatedBy   Person?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Debt {
+  id                 String         @id @default(cuid())
+  name               String
+  type               DebtType
+  balanceCents       Int
+  balanceAsOf        DateTime       @db.Date
+  /// Lower number = paid first when strategies tie (and the order for LOC_FIRST after the LOC).
+  priority           Int            @default(100)
+  minimumType        MinimumType    @default(FIXED)
+  /// FIXED: the payment. PERCENT_OF_BALANCE: the floor is minimumFloorCents. INTEREST_ONLY: ignored.
+  minimumCents       Int            @default(0)
+  minimumBps         Int            @default(0)
+  minimumFloorCents  Int            @default(0)
+  plannedExtraCents  Int            @default(0)
+  /// Car loans / leases: payment stops after this date.
+  endDate            DateTime?      @db.Date
+  amortizationMonths Int?
+  renewalDate        DateTime?      @db.Date
+  /// Receives extra payments and counts as "consumer debt" (LOC, cards).
+  includeInPayoff    Boolean        @default(true)
+  /// Subtracted in net worth (mortgage is handled by the home-equity toggle; leases are not debts).
+  includeInNetWorth  Boolean        @default(true)
+  notes              String?
+  rates              DebtRate[]
+  payments           DebtPayment[]
+  snapshots          SnapshotDebt[]
+  updatedBy          Person?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+/// Dated rate history. The rate in force on a date is the latest row with effectiveDate <= date.
+model DebtRate {
+  id            String   @id @default(cuid())
+  debtId        String
+  debt          Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  effectiveDate DateTime @db.Date
+  annualRateBps Int
+  note          String?
+
+  @@index([debtId, effectiveDate])
+}
+
+model DebtPayment {
+  id          String      @id @default(cuid())
+  debtId      String
+  debt        Debt        @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  date        DateTime    @db.Date
+  amountCents Int
+  type        PaymentType
+  note        String?
+  bonus       Bonus?
+  createdBy   Person?
+  createdAt   DateTime    @default(now())
+
+  @@index([debtId, date])
+}
+
+/// Recurring lump sums (e.g. stock-plan withdrawal every April and November) applied to the
+/// highest-priority debt under the active strategy.
+model LumpSumSchedule {
+  id             String    @id @default(cuid())
+  name           String
+  amountCents    Int
+  /// 1-12
+  months         Int[]
+  startDate      DateTime  @db.Date
+  endDate        DateTime? @db.Date
+  sourceIncomeId String?
+  sourceIncome   Income?   @relation(fields: [sourceIncomeId], references: [id], onDelete: SetNull)
+  active         Boolean   @default(true)
+  notes          String?
+  updatedBy      Person?
+  updatedAt      DateTime  @updatedAt
+}
+
+model InvestmentAccount {
+  id                String              @id @default(cuid())
+  owner             AccountOwner
+  name              String
+  type              AccountType
+  /// group, spousal, individual, private market, ...
+  subType           String?
+  /// Sub-accounts point at their roll-up parent (e.g. "Alex RRSP").
+  parentId          String?
+  parent            InvestmentAccount?  @relation("SubAccounts", fields: [parentId], references: [id], onDelete: Cascade)
+  children          InvestmentAccount[] @relation("SubAccounts")
+  balanceCents      Int                 @default(0)
+  balanceAsOf       DateTime            @db.Date
+  returnBps         Int                 @default(600)
+  includeInNetWorth Boolean             @default(true)
+  notes             String?
+  contributions     Contribution[]
+  incomes           Income[]
+  snapshots         SnapshotAccount[]
+  updatedBy         Person?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model Contribution {
+  id          String             @id @default(cuid())
+  accountId   String
+  account     InvestmentAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  amountCents Int
+  frequency   Frequency
+  source      ContributionSource
+  startDate   DateTime           @db.Date
+  endDate     DateTime?          @db.Date
+  /// Set when auto-created from a payroll Income line; kept in sync with it.
+  incomeId    String?            @unique
+  income      Income?            @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  notes       String?
+  updatedBy   Person?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model ContributionRoom {
+  id          String      @id @default(cuid())
+  person      Person
+  accountType AccountType
+  roomCents   Int
+  asOf        DateTime    @db.Date
+  notes       String?
+  updatedBy   Person?
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([person, accountType])
+}
+
+/// Overrides are a versioned JSON blob validated by src/lib/payoff/scenario.ts.
+model Scenario {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isBaseline  Boolean  @default(false)
+  overrides   Json
+  createdBy   Person?
+  updatedBy   Person?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Bonus {
+  id            String       @id @default(cuid())
+  person        Person
+  amountCents   Int
+  expectedYear  Int
+  /// 1-12
+  expectedMonth Int
+  confidence    Confidence   @default(UNCONFIRMED)
+  pctAppliedBps Int          @default(10000)
+  debtPaymentId String?      @unique
+  debtPayment   DebtPayment? @relation(fields: [debtPaymentId], references: [id], onDelete: SetNull)
+  updatedBy     Person?
+  updatedAt     DateTime     @updatedAt
+}
+
+/// Monthly check-in. `month` is the first day of the month.
+model Snapshot {
+  id                     String            @id @default(cuid())
+  month                  DateTime          @unique @db.Date
+  note                   String?
+  /// Payoff month projected by the baseline at the time of this snapshot (for drift).
+  projectedPayoffMonth   DateTime?         @db.Date
+  projectedInterestCents Int?
+  netWorthCents          Int?
+  createdBy              Person?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  debts                  SnapshotDebt[]
+  accounts               SnapshotAccount[]
+  spend                  SnapshotSpend[]
+}
+
+model SnapshotDebt {
+  id           String   @id @default(cuid())
+  snapshotId   String
+  snapshot     Snapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  debtId       String
+  debt         Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  balanceCents Int
+
+  @@unique([snapshotId, debtId])
+}
+
+model SnapshotAccount {
+  id           String            @id @default(cuid())
+  snapshotId   String
+  snapshot     Snapshot          @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  accountId    String
+  account      InvestmentAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  balanceCents Int
+
+  @@unique([snapshotId, accountId])
+}
+
+model SnapshotSpend {
+  id          String   @id @default(cuid())
+  snapshotId  String
+  snapshot    Snapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  category    String
+  amountCents Int
+
+  @@unique([snapshotId, category])
+}
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  entity   String
+  entityId String
+  action   String
+  editedBy Person
+  before   Json?
+  after    Json?
+  at       DateTime @default(now())
+
+  @@index([entity, entityId])
+}
