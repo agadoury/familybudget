@@ -67,7 +67,7 @@ export function DebtsPanel({ data }: { data: HouseholdDTO }) {
 
   return (
     <Card>
-      <CardContent className="pt-4 space-y-4">
+      <CardContent className="p-5 space-y-5">
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">{lang === "fr" ? "Tous les paiements de dettes vivent ici (jamais dans les dépenses fixes)." : "All debt payments live here (never as fixed expenses)."}</p>
           <Button size="sm" variant="outline" onClick={() => open("new")}><Plus /> {lang === "fr" ? "Ajouter une dette" : "Add a debt"}</Button>

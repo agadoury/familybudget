@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useApp } from "@/components/app/providers";
 import { Money } from "@/components/app/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, Callout } from "@/components/app/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,9 +75,15 @@ export function CheckinClient({ data, baselineOverrides, snapshots }: { data: Ho
 
   const monthOptions = Array.from({ length: 6 }, (_, i) => addMonths(nowKey, -i));
   const StepHeader = () => (
-    <ol className="flex flex-wrap gap-2 text-xs">
-      {STEPS.map((s, i) => <li key={s} className={`px-2 py-1 rounded ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-good-bg text-good" : "bg-muted text-muted-foreground"}`}>{i + 1}. {stepLabel(s)}</li>)}
-    </ol>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">{lang === "fr" ? "Étape" : "Step"} {step + 1} {lang === "fr" ? "de" : "of"} {STEPS.length} · {stepLabel(STEPS[step])}</span>
+        <span className="text-muted-foreground">{lang === "fr" ? "≈ 5 minutes" : "≈ 5 minutes"}</span>
+      </div>
+      <div className="flex gap-1.5">
+        {STEPS.map((s, i) => <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-muted"}`} />)}
+      </div>
+    </div>
   );
   const stepLabel = (s: (typeof STEPS)[number]) => ({
     debts: lang === "fr" ? "Dettes" : "Debts", investments: lang === "fr" ? "Placements" : "Investments", spend: lang === "fr" ? "Dépenses variables" : "Flexible spend", lumps: lang === "fr" ? "Montants reçus" : "Lump sums", review: lang === "fr" ? "Bilan" : "Review",
@@ -107,11 +114,9 @@ export function CheckinClient({ data, baselineOverrides, snapshots }: { data: Ho
   );
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-semibold">{t("checkin.title")}</h1>
-        <Select className="w-auto h-8" value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Month">{monthOptions.map((m) => <option key={m} value={m}>{fm(m)}</option>)}</Select>
-      </div>
+    <div className="space-y-5 max-w-2xl mx-auto">
+      <PageHeader title={t("checkin.title")} subtitle={lang === "fr" ? "Une fois par mois, ensemble : les vrais chiffres, puis ce que ça change." : "Once a month, together: the real numbers, then what they change."}
+        actions={<Select className="w-auto h-9" value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Month">{monthOptions.map((m) => <option key={m} value={m}>{fm(m)}</option>)}</Select>} />
       <StepHeader />
 
       {step === 0 && (
@@ -186,14 +191,14 @@ export function CheckinClient({ data, baselineOverrides, snapshots }: { data: Ho
               <div><div className="text-xs text-muted-foreground">{t("dash.netWorth")}</div><div className="font-semibold tabular">{money(after.currentNetWorthCents, { compact: true })}</div></div>
               <div><div className="text-xs text-muted-foreground">{t("dash.consumerDebt")}</div><div className="font-semibold tabular">{money(actualConsumer, { compact: true })}</div></div>
             </div>
-            <div className="rounded-md bg-muted p-3"><div className="text-xs text-muted-foreground mb-1">{lang === "fr" ? "Une suggestion" : "One suggestion"}</div>{suggestion}</div>
+            <Callout tone="info"><div className="text-xs text-muted-foreground mb-1">{lang === "fr" ? "Une suggestion" : "One suggestion"}</div>{suggestion}</Callout>
             {saved ? <Badge variant="good"><Check className="h-3 w-3" /> {t("common.saved")}</Badge> : <Button onClick={submit} disabled={pending} className="w-full h-11">{lang === "fr" ? "Enregistrer le bilan" : "Save check-in"}</Button>}
           </CardContent></Card>
       )}
 
       <div className="flex justify-between">
-        <Button variant="outline" disabled={step === 0} onClick={() => setStep((s) => s - 1)}><ArrowLeft /> {lang === "fr" ? "Précédent" : "Back"}</Button>
-        {step < STEPS.length - 1 && <Button onClick={() => setStep((s) => s + 1)}>{lang === "fr" ? "Suivant" : "Next"} <ArrowRight /></Button>}
+        <Button variant="outline" size="lg" disabled={step === 0} onClick={() => setStep((s) => s - 1)}><ArrowLeft /> {lang === "fr" ? "Précédent" : "Back"}</Button>
+        {step < STEPS.length - 1 && <Button size="lg" onClick={() => setStep((s) => s + 1)}>{lang === "fr" ? "Suivant" : "Next"} <ArrowRight /></Button>}
       </div>
 
       {snapshots.length > 0 && (

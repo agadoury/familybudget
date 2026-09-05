@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Download, Upload } from "lucide-react";
 import { useApp } from "@/components/app/providers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/app/page";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -33,8 +34,8 @@ export function SettingsClient({ settings, scenarios }: { settings: S; scenarios
   const F = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => <div className="space-y-1"><Label>{label}</Label>{children}{hint && <p className="text-xs text-muted-foreground">{hint}</p>}</div>;
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <h1 className="text-xl font-semibold">{t("settings.title")}</h1>
+    <div className="space-y-5 max-w-2xl">
+      <PageHeader title={t("settings.title")} subtitle={lang === "fr" ? "Noms, langue, hypothèses et données." : "Names, language, assumptions and data."} />
       <Card><CardHeader><CardTitle>{lang === "fr" ? "Ménage" : "Household"}</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 text-sm">
           <F label={lang === "fr" ? "Nom 1" : "Name 1"}><Input defaultValue={s.alexName} onBlur={(e) => e.target.value !== s.alexName && save({ alexName: e.target.value })} /></F>

@@ -62,3 +62,9 @@ Trade-offs made without asking, with the reason. Newest at the bottom.
     Vercel; the password is shared and long-lived by design.
 21. **No Vercel deploy from the build environment** (no Vercel/Neon credentials available). The
     README has the exact steps; `npm run vercel-build` runs migrations before the build.
+22. **Design pass for everyday use.** One idea per screen: a plain sentence and one big number
+    first, details one tap away. Inline editing is kept on laptops (name + amount, Tab through
+    rows); on phones rows are tap-to-open and every field lives in a bottom drawer with large
+    inputs. Advanced scenario levers sit under "More options". Colours always come with a word
+    or icon (never colour alone). Nothing was removed; the month-by-month table, comparison,
+    solver, bonuses and debt editor are still on the Debt plan page.

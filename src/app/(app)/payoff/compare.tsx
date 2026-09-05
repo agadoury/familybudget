@@ -39,7 +39,8 @@ export function Compare({ data, scenarios, current }: { data: HouseholdDTO; scen
 
   return (
     <Card>
-      <CardContent className="pt-4 space-y-3">
+      <CardContent className="p-5 space-y-3">
+        <p className="text-sm text-muted-foreground">{lang === "fr" ? "Cochez 2 à 4 plans pour les voir côte à côte." : "Tick 2 to 4 plans to see them side by side."}</p>
         <div className="flex flex-wrap gap-3 text-sm">
           {options.map((o) => (
             <label key={o.id} className="flex items-center gap-1">

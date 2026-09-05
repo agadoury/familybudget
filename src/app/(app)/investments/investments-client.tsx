@@ -2,12 +2,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useApp } from "@/components/app/providers";
 import { How } from "@/components/app/how";
 import { Money } from "@/components/app/money";
-import { MoneyCell, TextCell, CheckCell, DateCell } from "@/components/app/inline";
+import { MoneyCell, DateCell } from "@/components/app/inline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, ListRow, EmptyState, Section } from "@/components/app/page";
+import { Wallet, Trash2 as TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,6 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LinesChart } from "@/components/charts/lines-chart";
 import { CHART_COLORS } from "@/components/charts/theme";
 import { EMPTY_OVERRIDES, type ScenarioOverrides } from "@/lib/payoff";
@@ -50,6 +51,8 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
   const [whatIf, setWhatIf] = React.useState<{ returnBps: number | null; pauseMonths: number }>({ returnBps: null, pauseMonths: 0 });
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [adding, setAdding] = React.useState(false);
+  const [editing, setEditing] = React.useState<Account | null>(null);
+  const [edit, setEdit] = React.useState<Partial<AccountInput>>({});
   const [form, setForm] = React.useState<AccountInput>({ owner: "ALEX", name: "", type: "TFSA", subType: null, parentId: null, balanceCents: 0, balanceAsOf: today(), returnBps: data.settings.defaultReturnBps, includeInNetWorth: true, notes: null });
   const [newContrib, setNewContrib] = React.useState({ accountId: "", amount: "" });
   const [pending, start] = React.useTransition();
@@ -96,7 +99,6 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
   });
   const nwRows = projection.netWorth.slice(0, horizon + 1).filter((_, i) => i % 12 === 0 || i === horizon).map((n) => ({ month: n.month, nw: includeHome ? n.withHomeCents : n.cents }));
 
-  const patchAccount = (id: string, patch: Partial<AccountInput>) => start(async () => { const r = await updateAccount(id, patch); if (!r.ok) toast.error(r.error); else { toast.success(t("common.saved")); router.refresh(); } });
 
   // Contribution room: entered room − contributions to that owner's accounts of that type since the as-of date.
   const roomFor = (person: "ALEX" | "SELIA", type: "TFSA" | "RRSP") => {
@@ -116,72 +118,68 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t("invest.title")}</h1>
-        <Button size="sm" variant="outline" onClick={() => setAdding(true)}><Plus /> {lang === "fr" ? "Ajouter un compte" : "Add account"}</Button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader title={t("invest.title")} subtitle={lang === "fr" ? "Ce que nous avons de côté, et où cela nous mène." : "What we have set aside, and where it takes us."}
+        actions={<Button variant="soft" onClick={() => setAdding(true)}><Plus /> {lang === "fr" ? "Ajouter un compte" : "Add account"}</Button>} />
 
-      {/* Accounts table */}
-      <Card>
-        <CardContent className="pt-4">
-          {groups.length === 0 ? <p className="text-sm text-muted-foreground border border-dashed rounded p-4">{lang === "fr" ? "Ajoutez vos comptes (REER, CELI, REEE, encaisse) avec leur solde et la date du solde." : "Add your accounts (RRSP, TFSA, RESP, cash) with their balance and the balance date."}</p> : (
-            <Table>
-              <TableHeader><TableRow><TableHead /><TableHead>{lang === "fr" ? "Compte" : "Account"}</TableHead><TableHead className="text-right">{t("common.balance")}</TableHead><TableHead>{t("common.asOf")}</TableHead><TableHead className="text-right">{lang === "fr" ? "Rendement" : "Return"}</TableHead><TableHead className="text-right">{lang === "fr" ? "Cotisations/mois" : "Contributions/month"}</TableHead><TableHead className="text-center">{lang === "fr" ? "Valeur nette" : "Net worth"}</TableHead><TableHead /></TableRow></TableHeader>
-              <TableBody>
-                {groups.map((g) => {
-                  const k = `${g.owner}:${g.type}`;
-                  const ls = groupLeaves(g);
-                  const bal = ls.reduce((s, a) => s + a.balanceCents, 0);
-                  const oldest = ls.map((a) => a.balanceAsOf).sort()[0];
-                  const contrib = ls.reduce((s, a) => s + monthlyInto(a.id), 0);
-                  const wRet = bal > 0 ? Math.round(ls.reduce((s, a) => s + a.returnBps * a.balanceCents, 0) / bal) : ls[0]?.returnBps ?? 0;
-                  const isOpen = expanded[k] ?? false;
-                  const single = ls.length === 1 && g.members.length === 1;
-                  return (
-                    <React.Fragment key={k}>
-                      <TableRow className="font-medium bg-muted/30">
-                        <TableCell className="w-8">{!single && <button aria-expanded={isOpen} aria-label="Expand" onClick={() => setExpanded((e) => ({ ...e, [k]: !isOpen }))}>{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>}</TableCell>
-                        <TableCell>{personName(g.owner)} · {typeLabel[g.type]} {!single && <span className="text-xs text-muted-foreground">({ls.length})</span>}</TableCell>
-                        <TableCell className="text-right">{single ? <MoneyCell cents={ls[0].balanceCents} onCommit={(v) => patchAccount(ls[0].id, { balanceCents: v })} ariaLabel={t("common.balance")} /> : <Money cents={bal} />}</TableCell>
-                        <TableCell className="text-xs">{single ? <DateCell value={ls[0].balanceAsOf} onCommit={(v) => v && patchAccount(ls[0].id, { balanceAsOf: v })} /> : oldest} {daysSince(oldest) > STALE_DAYS && <Badge variant="watch">{t("common.stale")} · {daysSince(oldest)} d</Badge>}</TableCell>
-                        <TableCell className="text-right">{single ? <PctCell bps={ls[0].returnBps} onCommit={(v) => patchAccount(ls[0].id, { returnBps: v })} /> : pct(wRet, 1)}</TableCell>
-                        <TableCell className="text-right"><Money cents={contrib} /></TableCell>
-                        <TableCell className="text-center">{single ? <CheckCell checked={ls[0].includeInNetWorth} onCommit={(v) => patchAccount(ls[0].id, { includeInNetWorth: v })} /> : ls.every((a) => a.includeInNetWorth) ? "✓" : ls.some((a) => a.includeInNetWorth) ? "~" : "—"}</TableCell>
-                        <TableCell className="w-10">{single && <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-act" aria-label={t("common.delete")} onClick={() => start(async () => { const r = await deleteAccount(ls[0].id); if (!r.ok) toast.error(r.error); else router.refresh(); })}><Trash2 className="h-3.5 w-3.5" /></Button>}</TableCell>
-                      </TableRow>
-                      {isOpen && !single && ls.map((a) => (
-                        <TableRow key={a.id}>
-                          <TableCell />
-                          <TableCell className="pl-6"><TextCell value={a.name} onCommit={(v) => patchAccount(a.id, { name: v })} ariaLabel={t("common.name")} /><span className="text-xs text-muted-foreground pl-2">{a.subType}</span></TableCell>
-                          <TableCell className="text-right"><MoneyCell cents={a.balanceCents} onCommit={(v) => patchAccount(a.id, { balanceCents: v })} ariaLabel={t("common.balance")} /></TableCell>
-                          <TableCell className="text-xs"><DateCell value={a.balanceAsOf} onCommit={(v) => v && patchAccount(a.id, { balanceAsOf: v })} /> {daysSince(a.balanceAsOf) > STALE_DAYS && <Badge variant="watch">{t("common.stale")}</Badge>}</TableCell>
-                          <TableCell className="text-right"><PctCell bps={a.returnBps} onCommit={(v) => patchAccount(a.id, { returnBps: v })} /></TableCell>
-                          <TableCell className="text-right"><Money cents={monthlyInto(a.id)} /></TableCell>
-                          <TableCell className="text-center"><CheckCell checked={a.includeInNetWorth} onCommit={(v) => patchAccount(a.id, { includeInNetWorth: v })} /></TableCell>
-                          <TableCell><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-act" aria-label={t("common.delete")} onClick={() => start(async () => { const r = await deleteAccount(a.id); if (!r.ok) toast.error(r.error); else router.refresh(); })}><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
-                        </TableRow>
-                      ))}
-                    </React.Fragment>
-                  );
-                })}
-                <TableRow className="font-semibold">
-                  <TableCell /><TableCell>{t("common.total")}</TableCell>
-                  <TableCell className="text-right"><Money cents={data.accounts.filter((a) => !childrenOf(a.id).length).reduce((s, a) => s + a.balanceCents, 0)} /></TableCell>
-                  <TableCell /><TableCell /><TableCell className="text-right"><Money cents={data.accounts.reduce((s, a) => s + monthlyInto(a.id), 0)} /></TableCell><TableCell /><TableCell />
-                </TableRow>
-              </TableBody>
-            </Table>
-          )}
-          <p className="text-xs text-muted-foreground mt-2">{lang === "fr" ? `Soldes non mis à jour depuis ${STALE_DAYS}+ jours marqués « périmé ». Modifier un solde met la date à aujourd'hui.` : `Balances not updated in ${STALE_DAYS}+ days are marked stale. Editing a balance stamps today's date.`}</p>
-        </CardContent>
-      </Card>
+      {/* Accounts */}
+      <Section icon={<Wallet />} title={lang === "fr" ? "Nos comptes" : "Our accounts"} hint={lang === "fr" ? `Touchez un compte pour mettre son solde à jour. Un solde de plus de ${STALE_DAYS} jours est marqué « à mettre à jour ».` : `Tap an account to update its balance. A balance older than ${STALE_DAYS} days is marked “update me”.`}>
+        {groups.length === 0 ? <EmptyState>{lang === "fr" ? "Ajoutez vos comptes (REER, CELI, REEE, encaisse) avec leur solde et la date du solde." : "Add your accounts (RRSP, TFSA, RESP, cash) with their balance and the balance date."}</EmptyState> : groups.map((g) => {
+          const k = `${g.owner}:${g.type}`;
+          const ls = groupLeaves(g);
+          const bal = ls.reduce((s, a) => s + a.balanceCents, 0);
+          const oldest = ls.map((a) => a.balanceAsOf).sort()[0];
+          const contrib = ls.reduce((s, a) => s + monthlyInto(a.id), 0);
+          const isOpen = expanded[k] ?? false;
+          const single = ls.length === 1 && g.members.length === 1;
+          const stale = daysSince(oldest) > STALE_DAYS;
+          const openEdit = (a: Account) => { setEditing(a); setEdit({ name: a.name, balanceCents: a.balanceCents, balanceAsOf: a.balanceAsOf, returnBps: a.returnBps, includeInNetWorth: a.includeInNetWorth, subType: a.subType }); };
+          return (
+            <React.Fragment key={k}>
+              <ListRow
+                className={single ? "" : "cursor-pointer"}
+                primary={<span className="flex items-center gap-2">{personName(g.owner)} · {typeLabel[g.type]}{!single && <button type="button" aria-expanded={isOpen} className="text-xs text-primary font-medium" onClick={(e) => { e.stopPropagation(); setExpanded((x) => ({ ...x, [k]: !isOpen })); }}>{isOpen ? (lang === "fr" ? "replier" : "collapse") : `${ls.length} ${lang === "fr" ? "sous-comptes" : "sub-accounts"}`}</button>}</span>}
+                secondary={<span className="flex items-center gap-1.5 flex-wrap">{t("common.asOf")} {oldest}{stale && <Badge variant="watch">{lang === "fr" ? "à mettre à jour" : "update me"}</Badge>}{contrib > 0 && <> · +{money(contrib, { compact: true })}{t("common.perMonth")}</>}{!ls.every((a) => a.includeInNetWorth) && <> · {lang === "fr" ? "hors valeur nette" : "not in net worth"}</>}</span>}
+                value={money(bal)}
+                valueSub={`${pct(bal > 0 ? Math.round(ls.reduce((s, a) => s + a.returnBps * a.balanceCents, 0) / bal) : ls[0]?.returnBps ?? 0, 1)} ${lang === "fr" ? "présumé" : "assumed"}`}
+                onClick={single ? () => openEdit(ls[0]) : () => setExpanded((x) => ({ ...x, [k]: !isOpen }))}
+              />
+              {isOpen && !single && ls.map((a) => (
+                <ListRow key={a.id} className="pl-5 bg-muted/30" primary={a.name} secondary={<>{a.subType ? `${a.subType} · ` : ""}{t("common.asOf")} {a.balanceAsOf}{daysSince(a.balanceAsOf) > STALE_DAYS && <> · <Badge variant="watch">{lang === "fr" ? "à mettre à jour" : "update me"}</Badge></>}{monthlyInto(a.id) > 0 && <> · +{money(monthlyInto(a.id), { compact: true })}{t("common.perMonth")}</>}</>}
+                  value={money(a.balanceCents)} valueSub={`${pct(a.returnBps, 1)} ${lang === "fr" ? "présumé" : "assumed"}`} onClick={() => openEdit(a)} />
+              ))}
+            </React.Fragment>
+          );
+        })}
+        <div className="flex items-center justify-between pt-3 text-sm"><span className="text-muted-foreground">{t("common.total")} · {lang === "fr" ? "cotisations" : "contributions"} {money(data.accounts.reduce((s, a) => s + monthlyInto(a.id), 0), { compact: true })}{t("common.perMonth")}</span><Money cents={data.accounts.filter((a) => !childrenOf(a.id).length).reduce((s, a) => s + a.balanceCents, 0)} className="font-semibold" /></div>
+      </Section>
+
+      {/* Edit account drawer */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        {editing && (
+          <DialogContent title={editing.name} description={`${personName(editing.owner)} · ${typeLabel[editing.type]}${editing.subType ? ` · ${editing.subType}` : ""}`}>
+            <div className="space-y-4 text-sm flex-1 flex flex-col">
+              <div className="space-y-1.5"><Label>{lang === "fr" ? "Solde actuel" : "Current balance"}</Label><Input inputMode="decimal" className="h-12 text-lg text-right tabular" defaultValue={((edit.balanceCents ?? 0) / 100).toFixed(2)} autoFocus onBlur={(e) => { const c = parseMoney(e.target.value); if (c !== null) setEdit((x) => ({ ...x, balanceCents: c, balanceAsOf: today() })); }} /><p className="text-xs text-muted-foreground">{lang === "fr" ? "La date passe automatiquement à aujourd'hui." : "The as-of date becomes today automatically."}</p></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>{t("common.asOf")}</Label><Input type="date" value={edit.balanceAsOf ?? ""} onChange={(e) => setEdit((x) => ({ ...x, balanceAsOf: e.target.value }))} /></div>
+                <div className="space-y-1.5"><Label>{lang === "fr" ? "Rendement présumé (%)" : "Assumed return (%)"}</Label><Input inputMode="decimal" defaultValue={((edit.returnBps ?? 0) / 100).toFixed(1)} onBlur={(e) => { const p = Number(e.target.value.replace(",", ".")); if (Number.isFinite(p)) setEdit((x) => ({ ...x, returnBps: Math.round(p * 100) })); }} /></div>
+              </div>
+              <div className="space-y-1.5"><Label>{t("common.name")}</Label><Input value={edit.name ?? ""} onChange={(e) => setEdit((x) => ({ ...x, name: e.target.value }))} /></div>
+              <label className="flex items-center justify-between rounded-xl border p-3"><span>{lang === "fr" ? "Compter dans la valeur nette" : "Count in net worth"}<span className="block text-xs text-muted-foreground">{lang === "fr" ? "Désactivez pour le REEE, par exemple." : "Turn off for the RESP, for example."}</span></span><Switch checked={edit.includeInNetWorth ?? true} onCheckedChange={(v) => setEdit((x) => ({ ...x, includeInNetWorth: v }))} /></label>
+              <div className="flex items-center justify-between pt-3 mt-auto">
+                <Button variant="ghost" className="text-act" disabled={pending} onClick={() => start(async () => { const r = await deleteAccount(editing.id); if (!r.ok) toast.error(r.error); else { setEditing(null); router.refresh(); } })}><TrashIcon /> {t("common.delete")}</Button>
+                <Button size="lg" disabled={pending} onClick={() => start(async () => { const r = await updateAccount(editing.id, edit); if (!r.ok) toast.error(r.error); else { toast.success(t("common.saved")); setEditing(null); router.refresh(); } })}>{t("common.save")}</Button>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Projection */}
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <Card>
           <CardHeader className="flex-row items-center justify-between flex-wrap gap-2">
-            <CardTitle>{t("invest.projection")} <How>{lang === "fr" ? "Solde × (1 + r)^(1/12) chaque mois + cotisations en fin de mois. r = rendement annuel effectif du compte (ou l'hypothèse globale)." : "Balance × (1 + r)^(1/12) each month + end-of-month contributions. r = the account's effective annual return (or the global what-if)."}</How></CardTitle>
+            <CardTitle>{lang === "fr" ? "Dans 5, 10, 20, 30 ans" : "In 5, 10, 20, 30 years"} <How>{lang === "fr" ? "Solde × (1 + r)^(1/12) chaque mois + cotisations en fin de mois. r = rendement annuel effectif du compte (ou l'hypothèse globale)." : "Balance × (1 + r)^(1/12) each month + end-of-month contributions. r = the account's effective annual return (or the global what-if)."}</How></CardTitle>
             <Tabs value={String(years)} onValueChange={(v) => setYears(Number(v) as 5 | 10 | 20 | 30)}>
               <TabsList>{[5, 10, 20, 30].map((y) => <TabsTrigger key={y} value={String(y)}>{y} {t("common.years")}</TabsTrigger>)}</TabsList>
             </Tabs>
@@ -205,7 +203,7 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
 
         {/* What-ifs */}
         <Card className="h-fit">
-          <CardHeader><CardTitle>{lang === "fr" ? "Et si…" : "What if…"}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{lang === "fr" ? "Et si…" : "What if…"}</CardTitle><p className="text-sm text-muted-foreground">{lang === "fr" ? "Glissez pour voir la courbe changer." : "Drag to see the curve change."}</p></CardHeader>
           <CardContent className="space-y-5 text-sm">
             <div className="space-y-2">
               <Label>{lang === "fr" ? "Rendement global" : "Global return"}: {whatIf.returnBps === null ? (lang === "fr" ? "par compte" : "per account") : pct(whatIf.returnBps, 1)}</Label>
@@ -243,27 +241,25 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
       {/* Contribution room + Net worth */}
       <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
         <Card>
-          <CardHeader><CardTitle>{t("invest.room")} <How>{lang === "fr" ? "Droits saisis à la date indiquée − cotisations mensuelles depuis cette date (lignes du Budget)." : "Room entered at the as-of date − monthly contributions since that date (Budget lines)."}</How></CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader><TableRow><TableHead /><TableHead className="text-right">{lang === "fr" ? "Droits (saisis)" : "Room (entered)"}</TableHead><TableHead>{t("common.asOf")}</TableHead><TableHead className="text-right">{lang === "fr" ? "Utilisés depuis" : "Used since"}</TableHead><TableHead className="text-right">{lang === "fr" ? "Restants" : "Remaining"}</TableHead><TableHead className="text-right">{lang === "fr" ? "Rythme/an" : "Pace/yr"}</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {(["ALEX", "SELIA"] as const).flatMap((p) => (["TFSA", "RRSP"] as const).map((ty) => {
-                  const { r, used, remaining, yearly } = roomFor(p, ty);
-                  const save = (roomCents: number, asOf: string) => start(async () => { const x = await upsertContributionRoom({ person: p, accountType: ty, roomCents, asOf, notes: r?.notes ?? null }); if (!x.ok) toast.error(x.error); else router.refresh(); });
-                  return (
-                    <TableRow key={`${p}${ty}`}>
-                      <TableCell className="font-medium">{personName(p)} {typeLabel[ty]} {r?.notes?.toLowerCase().startsWith("estimate") && <Badge variant="watch">{t("common.estimate")}</Badge>}</TableCell>
-                      <TableCell className="text-right min-w-32"><MoneyCell cents={r?.roomCents ?? 0} onCommit={(v) => save(v, r?.asOf ?? today())} ariaLabel="Room" /></TableCell>
-                      <TableCell className="min-w-36"><DateCell value={r?.asOf ?? null} onCommit={(v) => v && save(r?.roomCents ?? 0, v)} /></TableCell>
-                      <TableCell className="text-right"><Money cents={used} /></TableCell>
-                      <TableCell className="text-right font-semibold"><Money cents={remaining} colour /></TableCell>
-                      <TableCell className="text-right text-muted-foreground"><Money cents={yearly} compact /></TableCell>
-                    </TableRow>
-                  );
-                }))}
-              </TableBody>
-            </Table>
+          <CardHeader><CardTitle>{t("invest.room")} <How>{lang === "fr" ? "Droits saisis à la date indiquée − cotisations mensuelles depuis cette date (lignes du Budget)." : "Room entered at the as-of date − monthly contributions since that date (Budget lines)."}</How></CardTitle><p className="text-sm text-muted-foreground">{lang === "fr" ? "Combien on peut encore cotiser." : "How much more we can contribute."}</p></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {(["ALEX", "SELIA"] as const).flatMap((p) => (["TFSA", "RRSP"] as const).map((ty) => {
+              const { r, used, remaining, yearly } = roomFor(p, ty);
+              const save = (roomCents: number, asOf: string) => start(async () => { const x = await upsertContributionRoom({ person: p, accountType: ty, roomCents, asOf, notes: r?.notes ?? null }); if (!x.ok) toast.error(x.error); else router.refresh(); });
+              const total = r?.roomCents ?? 0;
+              return (
+                <div key={`${p}${ty}`} className="rounded-xl border p-3 space-y-2">
+                  <div className="flex items-center justify-between"><span className="font-medium">{personName(p)} · {typeLabel[ty]}</span>{r?.notes?.toLowerCase().startsWith("estimate") && <Badge variant="watch">{t("common.estimate")}</Badge>}</div>
+                  <div className="text-2xl font-semibold tabular"><Money cents={remaining} colour /></div>
+                  <div className="text-xs text-muted-foreground">{lang === "fr" ? "restants" : "remaining"}{yearly > 0 && <> · {lang === "fr" ? "au rythme de" : "at"} {money(yearly, { compact: true })}/{lang === "fr" ? "an" : "yr"}</>}</div>
+                  {total > 0 && <div className="h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.min(100, Math.round((used / total) * 100))}%` }} /></div>}
+                  <div className="grid grid-cols-2 gap-2 items-center text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">{lang === "fr" ? "droits" : "room"} <MoneyCell cents={total} onCommit={(v) => save(v, r?.asOf ?? today())} ariaLabel="Room" className="w-24 font-medium text-foreground" /></span>
+                    <span className="flex items-center gap-1 justify-end whitespace-nowrap">{t("common.asOf")} <DateCell value={r?.asOf ?? null} onCommit={(v) => v && save(total, v)} className="w-auto text-foreground" /></span>
+                  </div>
+                </div>
+              );
+            }))}
           </CardContent>
         </Card>
         <Card>
@@ -301,21 +297,5 @@ export function InvestmentsClient({ data, scenarios, rooms }: { data: HouseholdD
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function PctCell({ bps, onCommit }: { bps: number; onCommit: (bps: number) => void }) {
-  const [v, setV] = React.useState((bps / 100).toFixed(1));
-  React.useEffect(() => setV((bps / 100).toFixed(1)), [bps]);
-  return (
-    <input
-      className="cell-input text-right tabular w-20"
-      inputMode="decimal"
-      value={v}
-      aria-label="Return"
-      onChange={(e) => setV(e.target.value)}
-      onBlur={() => { const p = Number(v.replace(",", ".")); if (Number.isFinite(p) && Math.round(p * 100) !== bps) onCommit(Math.round(p * 100)); else setV((bps / 100).toFixed(1)); }}
-      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-    />
   );
 }

@@ -38,7 +38,7 @@ export function BonusPanel({ data }: { data: HouseholdDTO }) {
 
   return (
     <Card>
-      <CardContent className="pt-4 space-y-4 text-sm">
+      <CardContent className="p-5 space-y-4 text-sm">
         <p className="text-muted-foreground">{lang === "fr" ? "Les bonis non confirmés apparaissent en pointillé sur le graphique et dans une deuxième ligne du résumé, jamais dans la référence ni dans plan vs réel. Confirmer un boni crée un vrai paiement forfaitaire." : "Unconfirmed bonuses show as a dotted overlay on the chart and a second summary line, never in the baseline or plan-vs-actual. Confirming one creates a real lump-sum payment."}</p>
         {rows.map((r) => (
           <div key={r.person} className="grid gap-2 md:grid-cols-[8rem_9rem_10rem_1fr_auto] items-center border rounded-md p-3">

@@ -18,7 +18,7 @@ export function Solver({ projection }: { projection: Projection }) {
   const affordRun = React.useMemo(() => payoffWithExtra(projection.payoffInput, affordCents), [projection.payoffInput, affordCents]);
   return (
     <Card>
-      <CardContent className="pt-4 grid gap-6 md:grid-cols-2 text-sm">
+      <CardContent className="p-5 grid gap-6 md:grid-cols-2 text-sm">
         <div className="space-y-2">
           <Label>{lang === "fr" ? "Nous voulons être sans dette le" : "We want to be debt-free by"}</Label>
           <input type="month" className="cell-input border-border w-auto" value={target} min={projection.payoffInput.startMonth} onChange={(e) => setTarget(e.target.value)} aria-label="Target month" />
