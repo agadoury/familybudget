@@ -7,6 +7,7 @@ const bps = (pct: number) => Math.round(pct * 100);
 
 /** Wipes every table and inserts the given data set. */
 export async function applySeed(prisma: PrismaClient, data: SeedData) {
+  const previous = await prisma.settings.findUnique({ where: { id: 1 } });
   await prisma.$transaction([
     prisma.auditLog.deleteMany(),
     prisma.snapshot.deleteMany(),
@@ -34,6 +35,8 @@ export async function applySeed(prisma: PrismaClient, data: SeedData) {
       defaultReturnBps: bps(data.settings.defaultReturnPct),
       alexGrossIncomeCents: c(data.settings.alexGrossIncome ?? 0),
       seliaGrossIncomeCents: c(data.settings.seliaGrossIncome ?? 0),
+      passwordHash: previous?.passwordHash ?? null,
+      language: previous?.language ?? "EN",
     },
   });
 

@@ -80,3 +80,10 @@ Trade-offs made without asking, with the reason. Newest at the bottom.
 25. **The "close the gap" package** cuts only non-essential flexible lines, largest first, in 5 %
     steps capped at 50 % per line; if that is not enough it offers pausing the vacation fund. The
     RESP rule targets 2 500 $/year because that captures the full CESG + QESI (30 % immediate).
+23. **Real numbers ship encrypted, not gitignored.** The repository is public, so the household seed
+    is committed only as an AES-256-GCM bundle whose key comes from a passphrase via scrypt
+    (N = 2^15). Entering that passphrase on the first visit decrypts and loads the data and
+    becomes the household password; the plaintext seed stays on Alex's machine. This replaces the
+    original "gitignored seed + run a command against production" plan, which needed a terminal.
+24. **Household password lives in the database, session secret is derived.** Zero environment
+    variables are required on Vercel; `HOUSEHOLD_PASSWORD` and `SESSION_SECRET` still override.

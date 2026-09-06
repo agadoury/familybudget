@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { checkPassword, EDITOR_COOKIE, hashPassword, needsPasswordSetup, SESSION_COOKIE, sessionToken, type Editor } from "@/lib/auth";
-import { audit } from "./common";
+import { audit, revalidateAll } from "./common";
+import { applySeed } from "@/lib/seed/apply";
+import { hasHouseholdBundle, unlockHouseholdSeed } from "@/lib/seed/household-bundle";
 
 const YEAR = 60 * 60 * 24 * 365;
 
@@ -39,8 +41,16 @@ export async function createPassword(_prev: { error?: string } | undefined, form
     .refine((d) => d.password === d.confirm, { message: "The two passwords do not match.", path: ["confirm"] })
     .safeParse({ password: formData.get("password"), confirm: formData.get("confirm") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid password." };
+  // When the repo ships encrypted household numbers, the first password must be the one that unlocks them.
+  let seed = null;
+  if (hasHouseholdBundle()) {
+    seed = unlockHouseholdSeed(parsed.data.password);
+    if (!seed) return { error: "That is not the household password that was set up. Check the passphrase you were given." };
+  }
   await prisma.settings.upsert({ where: { id: 1 }, update: { passwordHash: hashPassword(parsed.data.password) }, create: { id: 1, passwordHash: hashPassword(parsed.data.password) } });
+  if (seed) await applySeed(prisma, seed);
   await setSessionCookie();
+  revalidateAll();
   redirect("/");
 }
 
@@ -52,6 +62,17 @@ export async function changePassword(input: { current: string; next: string }): 
   await audit("Settings", "1", "update", null, { passwordChanged: true });
   await prisma.settings.update({ where: { id: 1 }, data: { passwordHash: hashPassword(input.next) } });
   await setSessionCookie();
+  return { ok: true };
+}
+
+/** Settings: wipe everything and reload the encrypted household numbers (needs the original passphrase). */
+export async function loadHouseholdNumbers(passphrase: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!hasHouseholdBundle()) return { ok: false, error: "No household bundle in this deployment." };
+  const seed = unlockHouseholdSeed(passphrase);
+  if (!seed) return { ok: false, error: "Wrong passphrase." };
+  await audit("Settings", "1", "update", null, { householdNumbersLoaded: true });
+  await applySeed(prisma, seed);
+  revalidateAll();
   return { ok: true };
 }
 

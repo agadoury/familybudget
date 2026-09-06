@@ -11,7 +11,7 @@ export function LoginForm({ next, create }: { next?: string; create: boolean }) 
     <form action={action} className="space-y-3">
       <input type="hidden" name="next" value={next ?? "/"} />
       <div className="space-y-1.5">
-        <Label htmlFor="password">{create ? "New password" : "Password"}</Label>
+        <Label htmlFor="password">{create ? "Household passphrase" : "Password"}</Label>
         <Input id="password" name="password" type="password" className="h-11 text-base" autoFocus autoComplete={create ? "new-password" : "current-password"} required minLength={create ? 8 : 1} />
       </div>
       {create && (
@@ -22,7 +22,7 @@ export function LoginForm({ next, create }: { next?: string; create: boolean }) 
       )}
       {state?.error ? <p className="text-sm text-act" role="alert">{state.error}</p> : null}
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "…" : create ? "Create password and open the app" : "Sign in"}
+        {pending ? "…" : create ? "Unlock and open the app" : "Sign in"}
       </Button>
     </form>
   );

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { parseMoney } from "@/lib/money";
 import { resetDemoData, updateSettings } from "@/lib/actions/settings";
 import { importBudgetCsv } from "@/lib/actions/csv";
-import { changePassword } from "@/lib/actions/auth";
+import { changePassword, loadHouseholdNumbers } from "@/lib/actions/auth";
 
 function PasswordForm() {
   const { lang } = useApp();
@@ -30,9 +30,29 @@ function PasswordForm() {
   );
 }
 
+function LoadHousehold({ hasBundle }: { hasBundle: boolean }) {
+  const { lang } = useApp();
+  const router = useRouter();
+  const [pass, setPass] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const [pending, start] = React.useTransition();
+  if (!hasBundle) return null;
+  return (
+    <div className="space-y-2">
+      {!open ? <Button variant="soft" onClick={() => setOpen(true)}>{lang === "fr" ? "Charger nos vrais chiffres" : "Load our real numbers"}</Button> : (
+        <form className="flex flex-wrap items-end gap-2 rounded-xl bg-watch-bg p-3" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await loadHouseholdNumbers(pass); if (r.ok) { toast.success(lang === "fr" ? "Vrais chiffres chargés" : "Real numbers loaded"); setOpen(false); setPass(""); router.refresh(); } else toast.error(r.error); }); }}>
+          <div className="space-y-1 flex-1 min-w-48"><Label>{lang === "fr" ? "Phrase de passe d'origine — ceci remplace TOUTES les données actuelles" : "Original passphrase — this replaces ALL current data"}</Label><Input type="password" value={pass} onChange={(e) => setPass(e.target.value)} /></div>
+          <Button type="submit" variant="destructive" disabled={pending || !pass}>{lang === "fr" ? "Remplacer" : "Replace"}</Button>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>{lang === "fr" ? "Annuler" : "Cancel"}</Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 type S = { alexName: string; seliaName: string; language: "EN" | "FR"; defaultScenarioId: string | null; defaultReturnBps: number; homeValueCents: number; cashBufferCents: number; includeHomeEquity: boolean; alexGrossIncomeCents: number; seliaGrossIncomeCents: number };
 
-export function SettingsClient({ settings, scenarios }: { settings: S; scenarios: { id: string; name: string }[] }) {
+export function SettingsClient({ settings, scenarios, hasBundle }: { settings: S; scenarios: { id: string; name: string }[]; hasBundle: boolean }) {
   const { t, lang } = useApp();
   const router = useRouter();
   const [s, setS] = React.useState(settings);
@@ -75,7 +95,8 @@ export function SettingsClient({ settings, scenarios }: { settings: S; scenarios
         </CardContent></Card>
 
       <Card><CardHeader><CardTitle>{lang === "fr" ? "Données" : "Data"}</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap gap-2 text-sm">
+        <CardContent className="flex flex-wrap gap-2 text-sm items-start">
+          <LoadHousehold hasBundle={hasBundle} />
           <Button variant="outline" asChild><a href="/api/budget/csv" download><Download /> {t("budget.exportCsv")}</a></Button>
           <label className="inline-flex"><input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} /><span className="inline-flex items-center gap-2 h-9 px-4 rounded-md border text-sm font-medium cursor-pointer hover:bg-accent"><Upload className="h-4 w-4" /> {t("budget.importCsv")}</span></label>
           {!confirmReset ? (

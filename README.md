@@ -12,13 +12,15 @@ for trade-offs.
 2. **Create the database**: in the project, **Storage** → **Create Database** → **Postgres** → accept the
    defaults → **Connect**. Vercel wires it up by itself.
 3. **Redeploy**: **Deployments** → latest → ⋯ → **Redeploy**. The build creates the tables.
-4. **Open the URL.** The first visit asks you to choose the household password (change it later in
-   Settings). Then use *Settings → Reset demo data* to look around, or load your real numbers once from
-   your computer:
+4. **Open the URL and enter the household passphrase.** The repository ships your real numbers as an
+   encrypted bundle (`prisma/household.enc.json`, AES-256-GCM, key derived with scrypt). The first
+   visit asks for the passphrase: it unlocks the numbers, loads them, and becomes the app password.
+   Change the password afterwards in Settings if you like; the passphrase is only needed again for
+   *Settings → Load our real numbers*, which wipes and reloads everything.
+
+   To refresh the bundle after editing `prisma/seed.household.ts` (gitignored, on your computer):
    ```bash
-   git clone https://github.com/agadoury/familybudget && cd familybudget && npm install
-   cp prisma/seed.household.example.ts prisma/seed.household.ts   # fill in your numbers (never committed)
-   DATABASE_URL="<Vercel → Storage → your database → .env.local tab → DATABASE_URL>" npm run db:seed:household
+   HOUSEHOLD_PASSPHRASE="<the passphrase>" npx tsx scripts/encrypt-household.ts && git commit -am "Update household numbers" && git push
    ```
 
 Until the database exists, the URL shows an “Almost there” page with these steps. Optional overrides:
