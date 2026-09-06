@@ -11,13 +11,15 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const missing = missingEnv();
   if (missing.length) return <SetupNeeded missing={missing} />;
-  if (!(await isAuthenticated())) redirect("/login");
   let settings: Awaited<ReturnType<typeof getSettings>>;
+  let authed = false;
   try {
     settings = await getSettings();
+    authed = await isAuthenticated();
   } catch (e) {
     return <SetupNeeded missing={[]} dbError={e instanceof Error ? e.message.split("\n")[0].slice(0, 160) : "unknown error"} />;
   }
+  if (!authed) redirect("/login");
   const editor = await currentEditor();
   return (
     <AppProviders lang={settings.language === "FR" ? "fr" : "en"} editor={editor} names={{ ALEX: settings.alexName, SELIA: settings.seliaName }}>

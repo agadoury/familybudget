@@ -115,6 +115,8 @@ model Settings {
   /// Gross annual salaries: used only to estimate marginal tax rates for RRSP-vs-debt advice.
   alexGrossIncomeCents  Int  @default(0)
   seliaGrossIncomeCents Int  @default(0)
+  /// scrypt hash of the shared household password (used when HOUSEHOLD_PASSWORD is not set).
+  passwordHash      String?
   updatedBy         Person?
   updatedAt         DateTime @updatedAt
 }

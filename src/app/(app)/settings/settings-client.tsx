@@ -14,6 +14,21 @@ import { Button } from "@/components/ui/button";
 import { parseMoney } from "@/lib/money";
 import { resetDemoData, updateSettings } from "@/lib/actions/settings";
 import { importBudgetCsv } from "@/lib/actions/csv";
+import { changePassword } from "@/lib/actions/auth";
+
+function PasswordForm() {
+  const { lang } = useApp();
+  const [current, setCurrent] = React.useState("");
+  const [next, setNext] = React.useState("");
+  const [pending, start] = React.useTransition();
+  return (
+    <form className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end text-sm" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await changePassword({ current, next }); if (r.ok) { toast.success(lang === "fr" ? "Mot de passe changé — tout le monde devra se reconnecter." : "Password changed — everyone signs in again."); setCurrent(""); setNext(""); } else toast.error(r.error); }); }}>
+      <div className="space-y-1"><Label>{lang === "fr" ? "Actuel" : "Current"}</Label><Input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} /></div>
+      <div className="space-y-1"><Label>{lang === "fr" ? "Nouveau (8+ caractères)" : "New (8+ characters)"}</Label><Input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} /></div>
+      <Button type="submit" disabled={pending || !current || next.length < 8}>{lang === "fr" ? "Changer" : "Change"}</Button>
+    </form>
+  );
+}
 
 type S = { alexName: string; seliaName: string; language: "EN" | "FR"; defaultScenarioId: string | null; defaultReturnBps: number; homeValueCents: number; cashBufferCents: number; includeHomeEquity: boolean; alexGrossIncomeCents: number; seliaGrossIncomeCents: number };
 
@@ -42,7 +57,11 @@ export function SettingsClient({ settings, scenarios }: { settings: S; scenarios
           <F label={lang === "fr" ? "Nom 2" : "Name 2"}><Input defaultValue={s.seliaName} onBlur={(e) => e.target.value !== s.seliaName && save({ seliaName: e.target.value })} /></F>
           <F label={lang === "fr" ? "Langue" : "Language"}><Select value={s.language} onChange={(e) => save({ language: e.target.value as "EN" | "FR" })}><option value="EN">English</option><option value="FR">Français</option></Select></F>
           <F label={lang === "fr" ? "Scénario par défaut" : "Default scenario"} hint={lang === "fr" ? "Utilisé par le tableau de bord." : "Used by the dashboard."}><Select value={s.defaultScenarioId ?? ""} onChange={(e) => save({ defaultScenarioId: e.target.value || null })}><option value="">—</option>{scenarios.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</Select></F>
-          <F label={lang === "fr" ? "Mot de passe du ménage" : "Household password"} hint={lang === "fr" ? "Défini par la variable d'environnement HOUSEHOLD_PASSWORD (Vercel › Settings › Environment Variables). Le changer déconnecte tout le monde." : "Set by the HOUSEHOLD_PASSWORD environment variable (Vercel › Settings › Environment Variables). Changing it signs everyone out."}><Input disabled value="••••••••" /></F>
+        </CardContent></Card>
+
+      <Card><CardHeader><CardTitle>{lang === "fr" ? "Mot de passe du ménage" : "Household password"}</CardTitle></CardHeader>
+        <CardContent>
+          <PasswordForm />
         </CardContent></Card>
 
       <Card><CardHeader><CardTitle>{lang === "fr" ? "Hypothèses" : "Assumptions"}</CardTitle></CardHeader>
