@@ -10,8 +10,10 @@ async function main() {
   let data: SeedData = demoSeed;
   if (profile === "household") {
     try {
-      // Dynamic import: the file is gitignored and may not exist.
-      const mod = (await import("./seed.household")) as { householdSeed: SeedData };
+      // Dynamic import with a computed path: the file is gitignored and may not exist,
+      // and the type checker must not try to resolve it.
+      const file = "./seed." + "household";
+      const mod = (await import(file)) as { householdSeed: SeedData };
       data = mod.householdSeed;
       console.log("Seeding REAL household data from prisma/seed.household.ts");
     } catch (e) {
